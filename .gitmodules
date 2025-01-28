@@ -1,0 +1,9 @@
+[submodule "e-SNLI"]
+	path = e-SNLI
+	url = https://github.com/OanaMariaCamburu/e-SNLI
+[submodule "SemEval2020-Task4-Commonsense-Validation-and-Explanation"]
+	path = SemEval2020-Task4-Commonsense-Validation-and-Explanation
+	url = https://github.com/wangcunxiang/SemEval2020-Task4-Commonsense-Validation-and-Explanation
+[submodule "cot-unfaithfulness"]
+	path = cot-unfaithfulness
+	url = https://github.com/milesaturpin/cot-unfaithfulness
