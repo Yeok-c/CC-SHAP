@@ -1,13 +1,13 @@
 # Yeok's fork
-conda create -n cc_shap python==3.11
-conda activate cc_shap
+conda create -n cc_shap python==3.11 --yes
+conda activate cc_shap 
 
 Install torch
 https://pytorch.org/get-started/previous-versions/ # you may have to browse here, I used:
 
 pip install torch==2.1.0 torchvision==0.16.0 torchaudio==2.1.0 --index-url https://download.pytorch.org/whl/cu118
 
-conda install --file requirements.txt -c conda-forge # I already updated requirement.txt to rule out 2025 unavailable packages 
+conda install --file requirements.txt -c conda-forge --yes # I already updated requirement.txt to rule out 2025 unavailable packages 
 
 python -m spacy download en_core_web_sm
 
@@ -22,9 +22,20 @@ Example `python faithfulness.py comve llama2-7b-chat 100`
 I ran into a CUDA problem - no GPU detected
 https://stackoverflow.com/questions/60987997/why-torch-cuda-is-available-returns-false-even-after-installing-pytorch-with
 
+### On Runpod
+mkdir -p ~/miniconda3
+wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O ~/miniconda3/miniconda.sh
+bash ~/miniconda3/miniconda.sh -b -u -p ~/miniconda3
+rm ~/miniconda3/miniconda.sh
+source ~/miniconda3/bin/activate
+conda init --all
+
+
+
 # CC-SHAP
 
 This is the implementation of the paper "On Measuring Faithfulness or Self-Consistency of Natural Language Explanations" https://arxiv.org/abs/2311.07466 accepted at ACL 2024!
+
 
 ## Cite
 ```bibtex
