@@ -9,8 +9,6 @@ pip install torch==2.1.0 torchvision==0.16.0 torchaudio==2.1.0 --index-url https
 
 conda install --file requirements.txt -c conda-forge # I already updated requirement.txt to rule out 2025 unavailable packages 
 
-pip install scipy transformers
-
 python -m spacy download en_core_web_sm
 
 ### Next you have to setup your huggingface
@@ -19,7 +17,7 @@ python -m spacy download en_core_web_sm
 
 ### Running
 Run `python faithfulness.py [TASK] [MODEL] 100`.
-Example `python faithfulness.py comve gpt2`
+Example `python faithfulness.py comve llama2-7b-chat 100`
 
 I ran into a CUDA problem - no GPU detected
 https://stackoverflow.com/questions/60987997/why-torch-cuda-is-available-returns-false-even-after-installing-pytorch-with

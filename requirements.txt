@@ -13,7 +13,7 @@ anyio=3.5.0=py311h06a4308_0
 argon2-cffi=21.3.0=pyhd3eb1b0_0
 argon2-cffi-bindings=21.2.0=py311h5eee18b_0
 arrow-cpp=11.0.0=h374c478_2
-asttokens=2.0.5=pyhd3eb1b0_0
+asttokens # asttokens=2.0.5=pyhd3eb1b0_0
 async-timeout=4.0.2=py311h06a4308_0
 attrs=23.1.0=py311h06a4308_0
 aws-c-common=0.6.8=h5eee18b_1
@@ -123,6 +123,9 @@ matplotlib
 spacy
 nltk 
 accelerate==0.26
+numba
+
+
 # removed:
 #   - torchvision==0.16.0=py311_cu118
 #   - torchtriton==2.1.0=py311
