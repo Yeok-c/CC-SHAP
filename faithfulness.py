@@ -29,7 +29,6 @@ random.seed(42)
 
 t1 = time.time()
 
-
 max_new_tokens = 100
 c_task = sys.argv[1]
 model_name = sys.argv[2]

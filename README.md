@@ -1,3 +1,29 @@
+# Yeok's fork
+conda create -n cc_shap python==3.11
+conda activate cc_shap
+
+Install torch
+https://pytorch.org/get-started/previous-versions/ # you may have to browse here, I used:
+
+pip install torch==2.1.0 torchvision==0.16.0 torchaudio==2.1.0 --index-url https://download.pytorch.org/whl/cu118
+
+conda install --file requirements.txt -c conda-forge # I already updated requirement.txt to rule out 2025 unavailable packages 
+
+pip install scipy transformers
+
+python -m spacy download en_core_web_sm
+
+### Next you have to setup your huggingface
+- Tokens
+- This repo: https://huggingface.co/meta-llama/Llama-2-13b-chat-hf #(regardless of what model you're using). Takes a few hours for approval.
+
+### Running
+Run `python faithfulness.py [TASK] [MODEL] 100`.
+Example `python faithfulness.py comve gpt2`
+
+I ran into a CUDA problem - no GPU detected
+https://stackoverflow.com/questions/60987997/why-torch-cuda-is-available-returns-false-even-after-installing-pytorch-with
+
 # CC-SHAP
 
 This is the implementation of the paper "On Measuring Faithfulness or Self-Consistency of Natural Language Explanations" https://arxiv.org/abs/2311.07466 accepted at ACL 2024!

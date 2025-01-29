@@ -4,7 +4,7 @@
 _libgcc_mutex=0.1=conda_forge
 _openmp_mutex=4.5=2_kmp_llvm
 abseil-cpp=20211102.0=hd4dd3e8_0
-accelerate=0.24.1=pyhd8ed1ab_0
+# accelerate=0.24.1=pyhd8ed1ab_0
 aiofiles=22.1.0=py311h06a4308_0
 aiohttp=3.8.5=py311h5eee18b_0
 aiosignal=1.2.0=pyhd3eb1b0_0
@@ -114,6 +114,15 @@ jupyterlab_server=2.22.0=py311h06a4308_0
 jupyterlab_widgets=3.0.5=py311h06a4308_0
 kiwisolver
 
+# added
+scipy
+scikit-learn
+transformers
+slicer
+matplotlib
+spacy
+nltk 
+accelerate==0.26
 # removed:
 #   - torchvision==0.16.0=py311_cu118
 #   - torchtriton==2.1.0=py311
