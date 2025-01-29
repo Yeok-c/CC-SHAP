@@ -124,7 +124,10 @@ spacy
 nltk 
 accelerate==0.26
 numba
-
+huggingface
+huggingface_hub
+gh
+protobuf
 
 # removed:
 #   - torchvision==0.16.0=py311_cu118
