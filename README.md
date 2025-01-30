@@ -1,4 +1,14 @@
 # Yeok's fork
+### Update 30 Jan
+I've packaged everything in a docker container so you can directly run it (almost). You just have to 
+- login to your huggingface
+
+### Running
+Run `python faithfulness.py [TASK] [MODEL] 100`.
+Example `python faithfulness.py comve llama2-7b-chat 100`
+
+
+## Previous information (Already pre-installed inside the docker image)
 conda create -n cc_shap python==3.11 --yes
 conda activate cc_shap 
 
@@ -20,9 +30,13 @@ Run `python faithfulness.py [TASK] [MODEL] 100`.
 Example `python faithfulness.py comve llama2-7b-chat 100`
 
 I ran into a CUDA problem - no GPU detected
+I think it's cuz my NVCC and Cudatoolkit is 12.1
+But the requirements.txt is expected for 11.8
+Anyways I gave up running it on my own computer (it's not fast enough anyways) and got a compute instance on RunPod
 https://stackoverflow.com/questions/60987997/why-torch-cuda-is-available-returns-false-even-after-installing-pytorch-with
 
-### On Runpod
+## On Runpod
+### Install conda first
 mkdir -p ~/miniconda3
 wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O ~/miniconda3/miniconda.sh
 bash ~/miniconda3/miniconda.sh -b -u -p ~/miniconda3
@@ -30,7 +44,7 @@ rm ~/miniconda3/miniconda.sh
 source ~/miniconda3/bin/activate
 conda init --all
 
-
+### Follow the same steps as installation on top
 
 # CC-SHAP
 

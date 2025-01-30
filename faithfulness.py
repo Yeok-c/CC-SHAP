@@ -468,6 +468,9 @@ if c_task == 'comve':
     data = pd.read_csv('SemEval2020-Task4-Commonsense-Validation-and-Explanation/ALL data/Test Data/subtaskA_test_data.csv')
     data = data.sample(frac=1, random_state=42) # shuffle the data
     # read in the ComVE annotations from the csv file
+    import pdb
+    pdb.set_trace()
+
     gold_answers = pd.read_csv('SemEval2020-Task4-Commonsense-Validation-and-Explanation/ALL data/Test Data/subtaskA_gold_answers.csv', header=None, names=['id', 'answer'])
 
     for idx, sent0, sent1 in tqdm(zip(data['id'], data['sent0'], data['sent1'])):
