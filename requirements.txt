@@ -124,7 +124,6 @@ spacy
 nltk 
 accelerate==0.26
 numba
-huggingface_hub
 gh
 protobuf
 
