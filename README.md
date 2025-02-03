@@ -1,33 +1,54 @@
 # Yeok's fork
-### Update 30 Jan
-I've packaged everything in a docker container so you can directly run it (almost). You just have to 
-- login to your huggingface
+Literally everything automated in the container
+You just have to
+
+```
+export HF_HOME=/workspace/huggingface
+conda activate cc_shap
+huggingface-cli login
+```
 
 ### Running
 Run `python faithfulness.py [TASK] [MODEL] 100`.
 Example `python faithfulness.py comve llama2-7b-chat 100`
 
+Models, metrics and tasks available:
+```
+TESTS = [
+         'atanasova_counterfactual',
+         'atanasova_input_from_expl',
+         'cc_shap-posthoc',
+         'turpin',
+         'lanham',
+         'cc_shap-cot',
+         ]
 
-## Previous information (Already pre-installed inside the docker image)
-conda create -n cc_shap python==3.11 --yes
-conda activate cc_shap 
+MODELS = {
+    'bloom-7b1': 'bigscience/bloom-7b1',
+    'opt-30b': 'facebook/opt-30b',
+    'llama30b': '/workspace/mitarb/parcalabescu/llama30b_hf',
+    'oasst-sft-6-llama-30b': '/workspace/mitarb/parcalabescu/transformers-xor_env/oasst-sft-6-llama-30b-xor/oasst-sft-6-llama-30b',
+    'gpt2': 'gpt2',
+    'llama2-7b': 'meta-llama/Llama-2-7b-hf',
+    'llama2-7b-chat': 'meta-llama/Llama-2-7b-chat-hf',
+    'llama2-13b': 'meta-llama/Llama-2-13b-hf',
+    'llama2-13b-chat': 'meta-llama/Llama-2-13b-chat-hf',
+    'mistral-7b': 'mistralai/Mistral-7B-v0.1',
+    'mistral-7b-chat': 'mistralai/Mistral-7B-Instruct-v0.1',
+    'falcon-7b': 'tiiuae/falcon-7b',
+    'falcon-7b-chat': 'tiiuae/falcon-7b-instruct',
+    'falcon-40b': 'tiiuae/falcon-40b',
+    'falcon-40b-chat': 'tiiuae/falcon-40b-instruct',
+}
 
-Install torch
-https://pytorch.org/get-started/previous-versions/ # you may have to browse here, I used:
-
-pip install torch==2.1.0 torchvision==0.16.0 torchaudio==2.1.0 --index-url https://download.pytorch.org/whl/cu118
-
-conda install --file requirements.txt -c conda-forge --yes # I already updated requirement.txt to rule out 2025 unavailable packages 
-
-python -m spacy download en_core_web_sm
-
-### Next you have to setup your huggingface
-- Tokens
-- This repo: https://huggingface.co/meta-llama/Llama-2-13b-chat-hf #(regardless of what model you're using). Takes a few hours for approval.
-
-### Running
-Run `python faithfulness.py [TASK] [MODEL] 100`.
-Example `python faithfulness.py comve llama2-7b-chat 100`
+LABELS = {
+    'comve': ['A', 'B'], # ComVE
+    'causal_judgment': ['A', 'B'],
+    'disambiguation_qa': ['A', 'B', 'C'],
+    'logical_deduction_five_objects': ['A', 'B', 'C', 'D', 'E'],
+    'esnli': ['A', 'B', 'C'],
+}
+```
 
 I ran into a CUDA problem - no GPU detected
 I think it's cuz my NVCC and Cudatoolkit is 12.1

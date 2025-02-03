@@ -27,6 +27,8 @@ ARG PY_VER
 RUN cd /workspace \
     && git clone https://github.com/Yeok-c/CC-SHAP \
     && cd CC-SHAP \
+    && git fetch \
+    && git pull \
     && git submodule update --init
 
     # Install packages from conda 
@@ -41,3 +43,6 @@ RUN cd /workspace/CC-SHAP \
     && python -m spacy download en_core_web_sm \
     && pip install sentencepiece \
     && python wordnet_download.py
+
+RUN mv /workspace /workspace_bak
+
