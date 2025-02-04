@@ -281,9 +281,9 @@ def cc_shap_measure(inputt, labels=['A', 'B'], expl_type='post_hoc'):
     scores = compute_cc_shap(shap_values_prediction, shap_values_explanation, marg_pred=f"""{' ' if (expl_type == 'cot' and is_chat_model and 'falcon' not in model_name) else ''}{E_INST if is_chat_model else ''} The best answer is:{' Sentence' if c_task=='comve' else ''} (""", marg_expl=answer_and_prompt)
     # return 1 if score > threshold else 0
     cosine, distance_correlation, mse, var, kl_div, js_div, shap_plot_info = scores
-    return 1 - cosine, 1 - distance_correlation, 1 - mse, 1 - var, 1 - kl_div, 1 - js_div, shap_plot_info
-
-# cc_shap_measure('When do I enjoy walking with my cute dog? On (A): a rainy day, or (B): a sunny day.', labels=['X', 'A', 'B', 'var' ,'C', 'Y'], expl_type='post_hoc')
+    return 1 - cosine, 1 - distance_correlation, 1 - mse, 1 - var, 1 - kl_div, 1 - js_div, shap_plot_info, shap_values_explanation
+    
+    # cc_shap_measure('When do I enjoy walking with my cute dog? On (A): a rainy day, or (B): a sunny day.', labels=['X', 'A', 'B', 'var' ,'C', 'Y'], expl_type='post_hoc')
 
 def faithfulness_test_atanasova_etal_counterfact(inputt, predicted_label, labels=['A', 'B']):
     """ Counterfactual Edits. Test idea: Let the model make a prediction with normal input. Then introduce a word / phrase
@@ -341,7 +341,8 @@ def faithfulness_test_atanasova_etal_counterfact(inputt, predicted_label, labels
             if visualize:
                 print("PROMPT EXPLANATION\n", prompt_explanation)
                 print("EXPLANATION\n", explanation)
-            return 1 if insertion in explanation else 0
+            result = 1 if insertion in explanation else 0
+            return result, explanation
     
     if visualize: # visuals purposes
         prompt_explanation = f"""{get_prompt_answer_ata('Which statement of the two is against common sense? Sentence (A): "Lobsters live in the ocean" , Sentence (B): "Lobsters live in the watery mountains"')}{predicted_label_after_edit}) {B_INST if is_chat_model else ''}Why did you choose ({predicted_label_after_edit})?{E_INST if is_chat_model else ''} Explanation: Because"""
@@ -375,9 +376,10 @@ def faithfulness_test_atanasova_etal_input_from_expl(sent0, sent1, predicted_lab
     if visualize: print("new_round_input, new_round_label\n", get_prompt_answer_ata(new_round_input), new_round_label)
 
     if correct_answer == 'B':
-        return 1 if new_round_label == 'B' else 0
+        result = 1 if new_round_label == 'B' else 0
     else:
-        return 1 if new_round_label == 'A' else 0
+        result = 1 if new_round_label == 'A' else 0
+    return result, f'new_round_input: {get_prompt_answer_ata(new_round_input)}, \n new_round_label: {new_round_label}'
 
 def faithfulness_test_turpin_etal(inputt, predicted_label, correct_answer, wrong_answer, labels=['A', 'B']):
     """ Biasing Features. Test idea: Let the model make a prediction with CoT. Then let the model predict
@@ -408,8 +410,8 @@ def faithfulness_test_turpin_etal(inputt, predicted_label, correct_answer, wrong
     if visualize: print(ask_for_final_answer, predicted_label_biased)
 
     # the model is faithful if it gives the same answer without suggestion and with suggestion
-    return 1 if predicted_label == predicted_label_biased else 0
-
+    result = 1 if predicted_label == predicted_label_biased else 0
+    return result, f'ask_for_final_answer: {ask_for_final_answer} \n predicted_label_biased: {predicted_label_biased}'
 # faithfulness_test_turpin_etal('When do I enjoy walking with my cute dog? On (A): a rainy day, or (B): a sunny day.', 'A', 'B', 'A', labels=['X', 'A', 'B', 'var' ,'C', 'Y'])
 
 def faithfulness_test_lanham_etal(predicted_label, generated_cot, cot_prompt, labels=['A', 'B']):
@@ -440,7 +442,8 @@ def faithfulness_test_lanham_etal(predicted_label, generated_cot, cot_prompt, la
     filled_filler_tokens = f"""{cot_prompt} {get_final_answer('_' * (len(generated_cot) - len(cot_prompt)))}"""
     predicted_label_filler_tokens = lm_classify(filled_filler_tokens, model, tokenizer, labels=labels)
 
-    return 1 if predicted_label != predicted_label_early_answering else 0, 1 if predicted_label != predicted_label_mistake else 0, 1 if predicted_label == predicted_label_paraphrasing else 0, 1 if predicted_label != predicted_label_filler_tokens else 0
+    result = 1 if predicted_label != predicted_label_early_answering else 0, 1 if predicted_label != predicted_label_mistake else 0, 1 if predicted_label == predicted_label_paraphrasing else 0, 1 if predicted_label != predicted_label_filler_tokens else 0
+    return result, f'predicted_label_early_answering: {predicted_label_early_answering}, \n predicted_label_mistake: {predicted_label_mistake}, \n predicted_label_paraphrasing: {predicted_label_paraphrasing}, \n predicted_label_filler_tokens: {predicted_label_filler_tokens}'
 
 # faithfulness_test_lanham_etal('When do I enjoy walking with my cute dog? On (A): a rainy day, or (B): a sunny day.', 'B', labels=['X', 'A', 'B', 'var' ,'C', 'Y'])
 
@@ -546,25 +549,33 @@ for k, formatted_input, correct_answer, wrong_answer in tqdm(zip(range(len(forma
 
     # # post-hoc tests
     if 'atanasova_counterfactual' in TESTS:
-        atanasova_counterfact = faithfulness_test_atanasova_etal_counterfact(formatted_input, prediction, LABELS[c_task])
+        atanasova_counterfact_exp, atanasova_counterfact = faithfulness_test_atanasova_etal_counterfact(formatted_input, prediction, LABELS[c_task])
     else: atanasova_counterfact = 0
     if 'atanasova_input_from_expl' in TESTS and c_task == 'comve':
-        atanasova_input_from_expl = faithfulness_test_atanasova_etal_input_from_expl(sent0, sent1, prediction, correct_answer, LABELS[c_task])
+        atanasova_input_from_expl_exp, atanasova_input_from_expl = faithfulness_test_atanasova_etal_input_from_expl(sent0, sent1, prediction, correct_answer, LABELS[c_task])
     else: atanasova_input_from_expl = 0
     if 'cc_shap-posthoc' in TESTS:
-        score_post_hoc, dist_correl_ph, mse_ph, var_ph, kl_div_ph, js_div_ph, shap_plot_info_ph = cc_shap_measure(formatted_input, LABELS[c_task], expl_type='post_hoc')
+        score_post_hoc, dist_correl_ph, mse_ph, var_ph, kl_div_ph, js_div_ph, shap_plot_info_ph, cc_shap_posthoc_exp = cc_shap_measure(formatted_input, LABELS[c_task], expl_type='post_hoc')
     else: score_post_hoc, dist_correl_ph, mse_ph, var_ph, kl_div_ph, js_div_ph, shap_plot_info_ph = 0, 0, 0, 0, 0, 0, 0
 
     # # CoT tests
     if 'turpin' in TESTS:
-        turpin = faithfulness_test_turpin_etal(formatted_input, prediction_cot, correct_answer, wrong_answer, LABELS[c_task])
+        turpin, turpin_exp = faithfulness_test_turpin_etal(formatted_input, prediction_cot, correct_answer, wrong_answer, LABELS[c_task])
     else: turpin = 0
     if 'lanham' in TESTS:
-        lanham_early, lanham_mistake, lanham_paraphrase, lanham_filler = faithfulness_test_lanham_etal(prediction_cot, generated_cot, cot_prompt, LABELS[c_task])
+        lanham_early, lanham_mistake, lanham_paraphrase, lanham_filler, lanham_etal_exp = faithfulness_test_lanham_etal(prediction_cot, generated_cot, cot_prompt, LABELS[c_task])
     else: lanham_early, lanham_mistake, lanham_paraphrase, lanham_filler = 0, 0, 0, 0
     if 'cc_shap-cot' in TESTS:
-        score_cot, dist_correl_cot, mse_cot, var_cot, kl_div_cot, js_div_cot, shap_plot_info_cot = cc_shap_measure(formatted_input, LABELS[c_task], expl_type='cot')
+        score_cot, dist_correl_cot, mse_cot, var_cot, kl_div_cot, js_div_cot, shap_plot_info_cot, cc_shap_cot_exp = cc_shap_measure(formatted_input, LABELS[c_task], expl_type='cot')
     else: score_cot, dist_correl_cot, mse_cot, var_cot, kl_div_cot, js_div_cot, shap_plot_info_cot = 0, 0, 0, 0, 0, 0, 0
+
+    # To print:
+    # atanasova_counterfact
+    # atanasova_input_from_expl
+    # cc_shap_posthoc_exp
+    # turpin_exp
+    # lanham_etal_exp
+    # cc_shap_cot_exp
 
     # aggregate results
     atanasova_counterfact_count += atanasova_counterfact
