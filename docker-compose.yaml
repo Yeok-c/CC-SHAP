@@ -1,0 +1,33 @@
+version: '3.8'
+
+services:
+  cc-shap:
+    build: .
+    image: yeokch/cc-shap:latest
+    stdin_open: true
+    tty: true
+    volumes:
+      - /home/yeok/projects/cc-shap_docker/miniconda:/miniconda
+      - /home/yeok/projects/cc-shap_docker/workspace:/workspace
+    environment:
+      - PY_VER=3.11
+      - PANDAS_VER=2.2.3
+      - DISPLAY=${DISPLAY}
+      - HF_TOKEN=${HF_TOKEN}
+      - HF_HOME=/workspace/huggingface
+      
+    command: /bin/bash
+    network_mode: "host"
+    privileged: true
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              device_ids: ['0']
+              capabilities: [gpu]
+    runtime: nvidia
+
+# Usage
+# docker-compose -f docker-compose.yaml build
+# docker-compose up -d
