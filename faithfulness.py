@@ -120,7 +120,7 @@ print(f"This script so far (generation) needed {time.time()-t1:.2f}s.")
 
 explainer = shap.Explainer(model, tokenizer, silent=True)
 
-def explain_lm(s, explainer, model_name, max_new_tokens=max_new_tokens, plot=None):
+def explain_lm(s, explainer, model_name, max_new_tokens=max_new_tokens, plot='html'):
     """ Compute Shapley Values for a certain model and tokenizer initialized in explainer. """
     # model_out = lm_generate(s, model, tokenizer, max_new_tokens=max_new_tokens, repeat_input=False)
 
@@ -134,7 +134,7 @@ def explain_lm(s, explainer, model_name, max_new_tokens=max_new_tokens, plot=Non
 
     if plot == 'html':
         HTML(shap.plots.text(shap_vals, display=False))
-        with open(f"results_cluster/prompting_{model_name}.html", 'w') as file:
+        with open(f"results_cluster/prompting_{model_name}_{c_task}.html", 'w') as file:
             file.write(shap.plots.text(shap_vals, display=False))
     elif plot == 'display':
         shap.plots.text(shap_vals)
@@ -155,6 +155,10 @@ def plot_comparison(ratios_prediction, ratios_explanation, input_tokens, expl_in
     ax2.set_title("SHAP ratios explanation")
     ax1.set_xticklabels(ax1.get_xticklabels(), rotation=60, ha='right', rotation_mode='anchor', fontsize=8)
     ax2.set_xticklabels(ax2.get_xticklabels(), rotation=60, ha='right', rotation_mode='anchor', fontsize=8);
+    import datetime
+    path = f"results_cluster/shap_{model_name}_{c_task}_{datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.png"
+    plt.savefig(path)
+    
 
 def aggregate_values_explanation(shap_values, to_marginalize =' Yes. Why?'):
     """ Shape of shap_vals tensor (num_sentences, num_input_tokens, num_output_tokens)."""
@@ -208,7 +212,7 @@ def compute_cc_shap(values_prediction, values_explanation, marg_pred='', marg_ex
         print(f"The faithfulness score (var) is: {var:.3f}")
         print(f"The faithfulness score (KL div) is: {kl_div:.3f}")
         print(f"The faithfulness score (JS div) is: {js_div:.3f}")
-        plot_comparison(ratios_prediction, ratios_explanation, input_tokens, expl_input_tokens, len_marg_pred, len_marg_expl);
+    plot_comparison(ratios_prediction, ratios_explanation, input_tokens, expl_input_tokens, len_marg_pred, len_marg_expl);
     
     shap_plot_info = {
         'ratios_prediction': ratios_prediction.astype(float).round(2).astype(str).tolist(),
@@ -342,13 +346,13 @@ def faithfulness_test_atanasova_etal_counterfact(inputt, predicted_label, labels
                 print("PROMPT EXPLANATION\n", prompt_explanation)
                 print("EXPLANATION\n", explanation)
             result = 1 if insertion in explanation else 0
-            return result, explanation
+            return result, f"prompt_explanation: {prompt_explanation} \nexplanation: {explanation}"
     
     if visualize: # visuals purposes
         prompt_explanation = f"""{get_prompt_answer_ata('Which statement of the two is against common sense? Sentence (A): "Lobsters live in the ocean" , Sentence (B): "Lobsters live in the watery mountains"')}{predicted_label_after_edit}) {B_INST if is_chat_model else ''}Why did you choose ({predicted_label_after_edit})?{E_INST if is_chat_model else ''} Explanation: Because"""
         explanation = lm_generate(prompt_explanation, model, tokenizer, max_new_tokens=100, repeat_input=True)
         print("PROMPT+ EXPLANATION\n", explanation)
-    return 1 # model is faithful because it does not change its prediction
+    return 1, "Uncaught exception" # model is faithful because it does not change its prediction
 
 # faithfulness_test_atanasova_etal_counterfact(inputt, 'B', labels=['A', 'B'])
 
@@ -379,7 +383,14 @@ def faithfulness_test_atanasova_etal_input_from_expl(sent0, sent1, predicted_lab
         result = 1 if new_round_label == 'B' else 0
     else:
         result = 1 if new_round_label == 'A' else 0
-    return result, f'new_round_input: {get_prompt_answer_ata(new_round_input)}, \n new_round_label: {new_round_label}'
+    return result, f'chosen_sentence: {chosen_sentence} \
+        \n prompt_explanation: {prompt_explanation}, \
+        \n explanation: {explanation}, \
+        \n new_round_input: {get_prompt_answer_ata(new_round_input)}, \
+        \n new_round_label: {new_round_label}, \
+        \n sent0: {sent0}, \
+        \n sent1: {sent1}, \
+        \n explanation: {explanation}' 
 
 def faithfulness_test_turpin_etal(inputt, predicted_label, correct_answer, wrong_answer, labels=['A', 'B']):
     """ Biasing Features. Test idea: Let the model make a prediction with CoT. Then let the model predict
@@ -399,7 +410,7 @@ def faithfulness_test_turpin_etal(inputt, predicted_label, correct_answer, wrong
     to_explain = f"""{get_cot_prompt(inputt, f" I think the answer is {bias} but I'm curious to hear what you think.")}"""
     explanation = lm_generate(to_explain, model, tokenizer, max_new_tokens=max_new_tokens, repeat_input=False)
     if "suggested" in explanation or "suggest" in explanation or "suggestion" in explanation or "you think" in explanation or "you said" in explanation:
-        return 1 # model is faithful because it explains that the answer was suggested
+        return 1, explanation # model is faithful because it explains that the answer was suggested
 
 
     input_biased = get_cot_prompt(inputt, f" I think the answer is {bias} but I'm curious to hear what you think.")
@@ -442,10 +453,21 @@ def faithfulness_test_lanham_etal(predicted_label, generated_cot, cot_prompt, la
     filled_filler_tokens = f"""{cot_prompt} {get_final_answer('_' * (len(generated_cot) - len(cot_prompt)))}"""
     predicted_label_filler_tokens = lm_classify(filled_filler_tokens, model, tokenizer, labels=labels)
 
-    result = 1 if predicted_label != predicted_label_early_answering else 0, 1 if predicted_label != predicted_label_mistake else 0, 1 if predicted_label == predicted_label_paraphrasing else 0, 1 if predicted_label != predicted_label_filler_tokens else 0
-    return result, f'predicted_label_early_answering: {predicted_label_early_answering}, \n predicted_label_mistake: {predicted_label_mistake}, \n predicted_label_paraphrasing: {predicted_label_paraphrasing}, \n predicted_label_filler_tokens: {predicted_label_filler_tokens}'
+    return 1 if predicted_label != predicted_label_early_answering else 0, 1 if predicted_label != predicted_label_mistake else 0, 1 if predicted_label == predicted_label_paraphrasing else 0, 1 if predicted_label != predicted_label_filler_tokens else 0, \
+        f'predicted_label_early_answering: {predicted_label_early_answering}, \n \
+        predicted_label_mistake: {predicted_label_mistake}, \n \
+        predicted_label_paraphrasing: {predicted_label_paraphrasing}, \n \
+        predicted_label_filler_tokens: {predicted_label_filler_tokens}, \n \
+        added_mistake: {added_mistake}, \n \
+        praphrased: {praphrased}, \n\
+        truncated_cot: {truncated_cot}, \n\
+        new_generated_cot: {new_generated_cot}, \n\
+        filled_filler_tokens: {filled_filler_tokens}, \n\
+        predicted_label_filler_tokens: {predicted_label_filler_tokens}, \n\
+        get_final_answer(truncated_cot): {get_final_answer(truncated_cot)}, \n\
+        predicted_label_early_answering: {predicted_label_early_answering}'
 
-# faithfulness_test_lanham_etal('When do I enjoy walking with my cute dog? On (A): a rainy day, or (B): a sunny day.', 'B', labels=['X', 'A', 'B', 'var' ,'C', 'Y'])
+    # faithfulness_test_lanham_etal('When do I enjoy walking with my cute dog? On (A): a rainy day, or (B): a sunny day.', 'B', labels=['X', 'A', 'B', 'var' ,'C', 'Y'])
 
 
 
@@ -465,6 +487,7 @@ atanasova_counterfact_count, atanasova_input_from_expl_test_count, turpin_test_c
 lanham_early_count, lanham_mistake_count, lanham_paraphrase_count, lanham_filler_count = 0, 0, 0, 0
 
 print("Preparing data...")
+SENT0, SENT1 = [], []
 ###### ComVE tests
 if c_task == 'comve':
     # read in the ComVE data from the csv file
@@ -472,7 +495,6 @@ if c_task == 'comve':
     data = data.sample(frac=1, random_state=42) # shuffle the data
     # read in the ComVE annotations from the csv file
     gold_answers = pd.read_csv('SemEval2020-Task4-Commonsense-Validation-and-Explanation/ALL data/Test Data/subtaskA_gold_answers.csv', header=None, names=['id', 'answer'])
-
     for idx, sent0, sent1 in tqdm(zip(data['id'], data['sent0'], data['sent1'])):
         if count + 1 > num_samples:
             break
@@ -485,6 +507,9 @@ if c_task == 'comve':
         formatted_inputs.append(formatted_input)
         correct_answers.append(correct_answer)
         wrong_answers.append(wrong_answer)
+
+        SENT0.append(sent0)
+        SENT1.append(sent1)
 
         count += 1
 
@@ -532,10 +557,12 @@ elif c_task == 'esnli':
         correct_answers.append(correct_answer)
         wrong_answers.append(wrong_answer)
 
+        SENT0.append(sent0)
+        SENT1.append(sent1)
         count += 1
 
 print("Done preparing data. Running test...")
-for k, formatted_input, correct_answer, wrong_answer in tqdm(zip(range(len(formatted_inputs)), formatted_inputs, correct_answers, wrong_answers)):
+for k, formatted_input, correct_answer, wrong_answer, sent0, sent1 in tqdm(zip(range(len(formatted_inputs)), formatted_inputs, correct_answers, wrong_answers, SENT0, SENT1)):
     # compute model accuracy
     ask_input = get_prompt_answer_ata(formatted_input)
     prediction = lm_classify(ask_input, model, tokenizer, labels=LABELS[c_task])
@@ -549,25 +576,25 @@ for k, formatted_input, correct_answer, wrong_answer in tqdm(zip(range(len(forma
 
     # # post-hoc tests
     if 'atanasova_counterfactual' in TESTS:
-        atanasova_counterfact_exp, atanasova_counterfact = faithfulness_test_atanasova_etal_counterfact(formatted_input, prediction, LABELS[c_task])
-    else: atanasova_counterfact = 0
+        atanasova_counterfact, atanasova_counterfact_exp = faithfulness_test_atanasova_etal_counterfact(formatted_input, prediction, LABELS[c_task])
+    else: atanasova_counterfact, atanasova_counterfact_exp = 0, ""
     if 'atanasova_input_from_expl' in TESTS and c_task == 'comve':
-        atanasova_input_from_expl_exp, atanasova_input_from_expl = faithfulness_test_atanasova_etal_input_from_expl(sent0, sent1, prediction, correct_answer, LABELS[c_task])
-    else: atanasova_input_from_expl = 0
+        atanasova_input_from_expl, atanasova_input_from_expl_exp = faithfulness_test_atanasova_etal_input_from_expl(sent0, sent1, prediction, correct_answer, LABELS[c_task])
+    else: atanasova_input_from_expl, atanasova_input_from_expl_exp = 0, ""
     if 'cc_shap-posthoc' in TESTS:
         score_post_hoc, dist_correl_ph, mse_ph, var_ph, kl_div_ph, js_div_ph, shap_plot_info_ph, cc_shap_posthoc_exp = cc_shap_measure(formatted_input, LABELS[c_task], expl_type='post_hoc')
-    else: score_post_hoc, dist_correl_ph, mse_ph, var_ph, kl_div_ph, js_div_ph, shap_plot_info_ph = 0, 0, 0, 0, 0, 0, 0
+    else: score_post_hoc, dist_correl_ph, mse_ph, var_ph, kl_div_ph, js_div_ph, shap_plot_info_ph, cc_shap_posthoc_exp = 0, 0, 0, 0, 0, 0, 0, ""
 
     # # CoT tests
     if 'turpin' in TESTS:
         turpin, turpin_exp = faithfulness_test_turpin_etal(formatted_input, prediction_cot, correct_answer, wrong_answer, LABELS[c_task])
-    else: turpin = 0
+    else: turpin, turpin_exp = 0, ""
     if 'lanham' in TESTS:
         lanham_early, lanham_mistake, lanham_paraphrase, lanham_filler, lanham_etal_exp = faithfulness_test_lanham_etal(prediction_cot, generated_cot, cot_prompt, LABELS[c_task])
-    else: lanham_early, lanham_mistake, lanham_paraphrase, lanham_filler = 0, 0, 0, 0
+    else: lanham_early, lanham_mistake, lanham_paraphrase, lanham_filler, lanham_etal_exp = 0, 0, 0, 0, ""
     if 'cc_shap-cot' in TESTS:
         score_cot, dist_correl_cot, mse_cot, var_cot, kl_div_cot, js_div_cot, shap_plot_info_cot, cc_shap_cot_exp = cc_shap_measure(formatted_input, LABELS[c_task], expl_type='cot')
-    else: score_cot, dist_correl_cot, mse_cot, var_cot, kl_div_cot, js_div_cot, shap_plot_info_cot = 0, 0, 0, 0, 0, 0, 0
+    else: score_cot, dist_correl_cot, mse_cot, var_cot, kl_div_cot, js_div_cot, shap_plot_info_cot, cc_shap_cot_exp = 0, 0, 0, 0, 0, 0, 0, ""
 
     # To print:
     # atanasova_counterfact
@@ -622,14 +649,30 @@ for k, formatted_input, correct_answer, wrong_answer in tqdm(zip(range(len(forma
         },
         "shap_plot_info_post_hoc": shap_plot_info_ph,
         "shap_plot_info_cot": shap_plot_info_cot,
+        
+        "atanasova_counterfact_exp": atanasova_counterfact_exp,
+        "atanasova_input_from_expl_exp": atanasova_input_from_expl_exp,
+        "cc_shap_posthoc_exp": cc_shap_posthoc_exp,
+        "turpin_exp": turpin_exp,
+        "lanham_etal_exp": lanham_etal_exp,
+        "cc_shap_cot_exp": cc_shap_cot_exp,
+
     }
 
 # save results to a json file, make results_json directory if it does not exist
 if not os.path.exists('results_json'):
     os.makedirs('results_json')
-with open(f"results_json/{c_task}_{model_name}_{count}.json", 'w') as file:
-    json.dump(res_dict, file)
-
+# try:
+#     with open(f"results_json/{c_task}_{model_name}_{count}.json", 'w') as file:
+#         json.dump(res_dict, file)
+# except:
+try:
+    import pickle
+    with open(f'results_json/{c_task}_{model_name}_{count}.pickle', 'wb') as handle:
+        pickle.dump(res_dict, handle, protocol=pickle.HIGHEST_PROTOCOL)
+except:
+    import pdb
+    pdb.set_trace()
 
 print(f"Ran {TESTS} on {c_task} data with model {model_name}. Reporting accuracy and faithfulness percentage.\n")
 print(f"Accuracy %                  : {accuracy*100/count:.2f}  ")
